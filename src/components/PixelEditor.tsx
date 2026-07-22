@@ -9,6 +9,16 @@ import {
 import { type PixelGrid, clearGrid, cloneGrid, createGrid, plotLine, resizeGrid, setCell } from '../lib/grid';
 import { packedToCss } from '../lib/color';
 import { downloadSvg, gridToSvg } from '../lib/svgExport';
+import { type BrushShape, brushOffsets } from '../lib/brush';
+import { floodFill } from '../lib/fill';
+import { getPattern } from '../lib/patterns';
+
+export type Tool = 'draw' | 'fill';
+
+export interface Ink {
+  color: number;
+  patternId: string | null;
+}
 
 const BASE_CELL = 16;
 const MIN_SCALE = 0.25;
@@ -28,7 +38,10 @@ export interface PixelEditorProps {
   cols: number;
   rows: number;
   pixelAspectRatio: number;
-  paintColor: number;
+  ink: Ink;
+  tool: Tool;
+  brushShape: BrushShape;
+  brushSize: number;
   strokeEnabled: boolean;
   strokeColor: string;
   strokeWidth: number;
@@ -48,7 +61,19 @@ interface ActivePointer {
 }
 
 const PixelEditor = forwardRef<PixelEditorHandle, PixelEditorProps>(function PixelEditor(
-  { cols, rows, pixelAspectRatio, paintColor, strokeEnabled, strokeColor, strokeWidth, onHistoryChange },
+  {
+    cols,
+    rows,
+    pixelAspectRatio,
+    ink,
+    tool,
+    brushShape,
+    brushSize,
+    strokeEnabled,
+    strokeColor,
+    strokeWidth,
+    onHistoryChange,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -201,11 +226,26 @@ const PixelEditor = forwardRef<PixelEditorHandle, PixelEditorProps>(function Pix
     [cellW, cellH],
   );
 
-  const paintAt = useCallback(
+  const paintCell = useCallback(
     (x: number, y: number) => {
-      setCell(gridRef.current, x, y, paintColor);
+      const pattern = getPattern(ink.patternId);
+      if (pattern) {
+        const px = ((x % pattern.size) + pattern.size) % pattern.size;
+        const py = ((y % pattern.size) + pattern.size) % pattern.size;
+        if (!pattern.mask[py * pattern.size + px]) return;
+      }
+      setCell(gridRef.current, x, y, ink.color);
     },
-    [paintColor],
+    [ink],
+  );
+
+  const stampBrush = useCallback(
+    (cx: number, cy: number) => {
+      for (const [dx, dy] of brushOffsets(brushShape, brushSize)) {
+        paintCell(cx + dx, cy + dy);
+      }
+    },
+    [paintCell, brushShape, brushSize],
   );
 
   const handlePointerDown = useCallback(
@@ -240,12 +280,17 @@ const PixelEditor = forwardRef<PixelEditorHandle, PixelEditorProps>(function Pix
         const pos = screenToGrid(e.clientX, e.clientY);
         if (!pos) return;
         pushHistory();
-        paintAt(pos.x, pos.y);
-        redraw();
-        drawRef.current = { pointerId: e.pointerId, lastX: pos.x, lastY: pos.y };
+        if (tool === 'fill') {
+          floodFill(gridRef.current, pos.x, pos.y, paintCell);
+          redraw();
+        } else {
+          stampBrush(pos.x, pos.y);
+          redraw();
+          drawRef.current = { pointerId: e.pointerId, lastX: pos.x, lastY: pos.y };
+        }
       }
     },
-    [screenToGrid, pushHistory, paintAt, redraw],
+    [screenToGrid, pushHistory, tool, paintCell, stampBrush, redraw],
   );
 
   const handlePointerMove = useCallback(
@@ -276,13 +321,13 @@ const PixelEditor = forwardRef<PixelEditorHandle, PixelEditorProps>(function Pix
       if (drawRef.current && drawRef.current.pointerId === e.pointerId) {
         const pos = screenToGrid(e.clientX, e.clientY);
         if (!pos) return;
-        plotLine(drawRef.current.lastX, drawRef.current.lastY, pos.x, pos.y, (x, y) => paintAt(x, y));
+        plotLine(drawRef.current.lastX, drawRef.current.lastY, pos.x, pos.y, (x, y) => stampBrush(x, y));
         drawRef.current.lastX = pos.x;
         drawRef.current.lastY = pos.y;
         redraw();
       }
     },
-    [applyTransform, screenToGrid, paintAt, redraw],
+    [applyTransform, screenToGrid, stampBrush, redraw],
   );
 
   const endPointer = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {

@@ -1,10 +1,13 @@
 import type { CSSProperties } from 'react';
+import type { Tool } from './PixelEditor';
 
-export type PanelKind = 'color' | 'dimensions' | 'stroke' | null;
+export type PanelKind = 'color' | 'dimensions' | 'stroke' | 'brush' | null;
 
 interface ToolbarProps {
   activePanel: PanelKind;
   onTogglePanel: (panel: PanelKind) => void;
+  tool: Tool;
+  onToolChange: (tool: Tool) => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
@@ -18,6 +21,8 @@ interface ToolbarProps {
 export default function Toolbar({
   activePanel,
   onTogglePanel,
+  tool,
+  onToolChange,
   onUndo,
   onRedo,
   onClear,
@@ -31,6 +36,34 @@ export default function Toolbar({
 
   return (
     <div className="toolbar">
+      <button
+        type="button"
+        className={`toolbar-button${tool === 'draw' ? ' active' : ''}`}
+        onClick={() => onToolChange('draw')}
+        title="Draw"
+        aria-label="Draw"
+      >
+        ✎
+      </button>
+      <button
+        type="button"
+        className={`toolbar-button${tool === 'fill' ? ' active' : ''}`}
+        onClick={() => onToolChange('fill')}
+        title="Fill"
+        aria-label="Fill"
+      >
+        ▨
+      </button>
+      <button
+        type="button"
+        className={`toolbar-button${activePanel === 'brush' ? ' active' : ''}`}
+        onClick={() => toggle('brush')}
+        title="Brush"
+        aria-label="Brush"
+      >
+        ◯
+      </button>
+      <div className="toolbar-divider" />
       <button
         type="button"
         className={`toolbar-button color-button${activePanel === 'color' ? ' active' : ''}`}

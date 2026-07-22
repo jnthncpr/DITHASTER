@@ -1,10 +1,15 @@
+import { PATTERNS } from '../lib/patterns';
+import PatternSwatch from './PatternSwatch';
+
 interface ColorPickerPanelProps {
   color: string;
   alpha: number;
   eraser: boolean;
+  patternId: string | null;
   onColorChange: (hex: string) => void;
   onAlphaChange: (alpha: number) => void;
   onEraserToggle: () => void;
+  onPatternChange: (patternId: string | null) => void;
   onClose: () => void;
 }
 
@@ -17,9 +22,11 @@ export default function ColorPickerPanel({
   color,
   alpha,
   eraser,
+  patternId,
   onColorChange,
   onAlphaChange,
   onEraserToggle,
+  onPatternChange,
   onClose,
 }: ColorPickerPanelProps) {
   return (
@@ -65,8 +72,32 @@ export default function ColorPickerPanel({
               type="button"
               className="swatch"
               style={{ background: sw }}
-              onClick={() => onColorChange(sw)}
+              onClick={() => {
+                onColorChange(sw);
+                onPatternChange(null);
+              }}
               aria-label={`Swatch ${sw}`}
+            />
+          ))}
+        </div>
+        <div className="panel-subhead">Patterns</div>
+        <div className="pattern-swatches">
+          <button
+            type="button"
+            className={`pattern-swatch solid-option${patternId === null ? ' active' : ''}`}
+            onClick={() => onPatternChange(null)}
+            title="Solid"
+            aria-label="Solid"
+          >
+            Solid
+          </button>
+          {PATTERNS.map((p) => (
+            <PatternSwatch
+              key={p.id}
+              pattern={p}
+              color={color}
+              selected={patternId === p.id}
+              onSelect={() => onPatternChange(p.id)}
             />
           ))}
         </div>
