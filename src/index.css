@@ -1,0 +1,31 @@
+:root {
+  --bg: #1c1c22;
+  --panel-bg: #26262f;
+  --panel-border: #383842;
+  --text: #e8e8ec;
+  --text-dim: #9a9aa5;
+  --accent: #4fb8a8;
+
+  color-scheme: dark;
+  font: 15px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
